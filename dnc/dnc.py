@@ -166,7 +166,7 @@ class DNC:
         erase_vectors = erase_vectors.write(time, output_list[11])
         memory_matrix = memory_matrix.write(time, output_list[0])
         link_matrix = link_matrix.write(time, output_list[3])
-        print(type(time+1))
+        # print(type(time+1))
         return (
             time + 1, new_memory_state, outputs,
             free_gates,allocation_gates, write_gates,

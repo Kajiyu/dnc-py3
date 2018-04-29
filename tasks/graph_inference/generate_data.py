@@ -64,8 +64,8 @@ def generate_data(batch_size, edges, graph):
             for char_i in str_i:
                 one_hot_char_i = np.eye(10)[[int(char_i)]].tolist()[0]
                 out_list.extend(one_hot_char_i)
-            if idx < 2:
-                out_list.append(0)
+            # if idx < 2:
+            #     out_list.append(0)
         return out_list
     input_vecs = []
     out_vecs = []

@@ -32,8 +32,8 @@ if __name__ == '__main__':
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
     batch_size = 1
-    input_size = 92
-    output_size = 92
+    input_size = 90
+    output_size = 90
     sequence_max_length = 420
     words_count = 500
     word_size = 50
@@ -79,9 +79,21 @@ if __name__ == '__main__':
             )
 
             output, memory_views = ncomputer.get_outputs()
-            squashed_output = tf.clip_by_value(tf.sigmoid(output), 1e-6, 1. - 1e-6)
-
-            loss = binary_cross_entropy(squashed_output, ncomputer.target_output)
+            loss = None
+            for _k in range(9):
+                tmp_loss = tf.reduce_mean(
+                    tf.nn.softmax_cross_entropy_with_logits_v2(
+                        logits=output[:,:,_k*10:(_k+1)*10],
+                        labels=ncomputer.target_output[:,:,_k*10:(_k+1)*10],
+                        name="categorical_loss_"+str(_k+1)
+                    )
+                )
+                if loss is None:
+                    loss = tmp_loss
+                else:
+                    loss = loss + tmp_loss
+            loss = loss / 9.0
+            # print(loss)
 
             summeries = []
 
@@ -103,7 +115,7 @@ if __name__ == '__main__':
             llprint("Done!\n")
 
             llprint("Initializing Variables ... ")
-            session.run(tf.initialize_all_variables())
+            session.run(tf.global_variables_initializer())
             llprint("Done!\n")
 
             if from_checkpoint is not None:
