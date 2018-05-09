@@ -132,7 +132,7 @@ if __name__ == '__main__':
 
                 summerize = (i % 5 == 0)
                 mem_summarize = (i % 1000 == 0)
-                take_checkpoint = (i != 0) and (i % iterations == 0)
+                take_checkpoint = (i != 0) and (i % 1000 == 0)
 
                 loss_value, _, mem_views_values, summary = session.run([
                     loss,
