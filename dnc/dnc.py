@@ -171,7 +171,7 @@ class DNC:
         write_key = write_key.write(time, output_list[-1]['write_key'])
         read_keys = read_keys.write(time, output_list[-1]['read_keys'])
         write_vector = write_vector.write(time, output_list[-1]['write_vector'])
-        read_vectors = read_vectors.write(time, output_list[-1]['read_vectors'])
+        read_vectors = read_vectors.write(time, output_list[6])
         read_modes = read_modes.write(time, output_list[-1]['read_modes'])
 
         # print(type(time+1))
