@@ -134,7 +134,7 @@ if __name__ == '__main__':
 
             for i in range(iterations + 1):
                 llprint("\rIteration %d/%d" % (i, iterations))
-                input_data, target_output = generate_data(batch_size, np.array(edges), metro_graph)
+                input_data, target_output = generate_data(batch_size, np.array(edges), metro_graph, sequence_max_length)
 
                 summerize = (i % 5 == 0)
                 mem_summarize = (i % 1000 == 0)
