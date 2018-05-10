@@ -60,12 +60,15 @@ def generate_data(batch_size, edges, graph, max_length):
     def convert_one_hot(_arr):
         out_list = []
         for idx, i in enumerate(_arr):
-            str_i = "{0:03d}".format(i)
-            for char_i in str_i:
-                one_hot_char_i = np.eye(10)[[int(char_i)]].tolist()[0]
+            if idx < 2:
+                str_i = "{0:03d}".format(i)
+                for char_i in str_i:
+                    one_hot_char_i = np.eye(10)[[int(char_i)]].tolist()[0]
+                    out_list.extend(one_hot_char_i)
+                out_list.append(0)
+            else:
+                one_hot_char_i = np.eye(10)[[i]].tolist()[0]
                 out_list.extend(one_hot_char_i)
-            # if idx < 2:
-            #     out_list.append(0)
         return out_list
     input_vecs = []
     out_vecs = []
@@ -78,8 +81,8 @@ def generate_data(batch_size, edges, graph, max_length):
             out_vec.append(convert_one_hot([0, 0, 0]))
         start_id, goal_id = random.sample(range(1, 141), 2)
         shortest_path = bfs_shortest_path(graph, start_id, goal_id)
-        # input_vec.append(convert_one_hot([start_id, goal_id, 0]))
-        # out_vec.append(convert_one_hot([0, 0, 0]))
+        input_vec.append(convert_one_hot([start_id, goal_id, 0]))
+        out_vec.append(convert_one_hot([0, 0, 0]))
         for j in range(len(shortest_path)-1):
             input_vec.append(convert_one_hot([0, 0, 0]))
             out_vec.append(convert_one_hot(search_edge(shortest_path[j], shortest_path[j+1], edges)))

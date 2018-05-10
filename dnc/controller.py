@@ -160,8 +160,8 @@ class BaseController:
         parsed['read_modes'] = tf.reshape(interface_vector[:, free_end + 2:], modes_shape)
 
         # transforming the components to ensure they're in the right ranges
-        parsed['read_strengths'] = 1 + tf.nn.softplus(parsed['read_strengths'])
-        parsed['write_strength'] = 1 + tf.nn.softplus(parsed['write_strength'])
+        parsed['read_strengths'] = 1 + tf.nn.softplus(parsed['read_strengths']) #<- oneplus
+        parsed['write_strength'] = 1 + tf.nn.softplus(parsed['write_strength']) #<- oneplus
         parsed['erase_vector'] = tf.nn.sigmoid(parsed['erase_vector'])
         parsed['free_gates'] = tf.nn.sigmoid(parsed['free_gates'])
         parsed['allocation_gate'] = tf.nn.sigmoid(parsed['allocation_gate'])

@@ -118,12 +118,14 @@ class DNC:
 
             # report new state of RNN if exists
             nn_state[0] if nn_state is not None else tf.zeros(1),
-            nn_state[1] if nn_state is not None else tf.zeros(1)
+            nn_state[1] if nn_state is not None else tf.zeros(1),
+            interface
         ]
 
 
     def _loop_body(self, time, memory_state, outputs, free_gates, allocation_gates, write_gates,
-                   read_weightings, write_weightings, usage_vectors, erase_vectors, controller_state, memory_matrix, link_matrix):
+                   read_weightings, write_weightings, usage_vectors, erase_vectors, controller_state,
+                   memory_matrix, link_matrix, write_key, read_keys, write_vector, read_vectors, read_modes):
         """
         the body of the DNC sequence processing loop
 
@@ -166,13 +168,20 @@ class DNC:
         erase_vectors = erase_vectors.write(time, output_list[11])
         memory_matrix = memory_matrix.write(time, output_list[0])
         link_matrix = link_matrix.write(time, output_list[3])
+        write_key = write_key.write(time, output_list[-1]['write_key'])
+        read_keys = read_keys.write(time, output_list[-1]['read_keys'])
+        write_vector = write_vector.write(time, output_list[-1]['write_vector'])
+        read_vectors = read_vectors.write(time, output_list[-1]['read_vectors'])
+        read_modes = read_modes.write(time, output_list[-1]['read_modes'])
+
         # print(type(time+1))
         return (
             time + 1, new_memory_state, outputs,
             free_gates,allocation_gates, write_gates,
             read_weightings, write_weightings,
             usage_vectors, erase_vectors, new_controller_state,
-            memory_matrix, link_matrix
+            memory_matrix, link_matrix, write_key, read_keys,
+            write_vector, read_vectors, read_modes
         )
 
 
@@ -194,6 +203,11 @@ class DNC:
         erase_vectors = tf.TensorArray(tf.float32, self.sequence_length)
         memory_matrix = tf.TensorArray(tf.float32, self.sequence_length)
         link_matrix = tf.TensorArray(tf.float32, self.sequence_length)
+        write_key = tf.TensorArray(tf.float32, self.sequence_length)
+        read_keys = tf.TensorArray(tf.float32, self.sequence_length)
+        write_vector = tf.TensorArray(tf.float32, self.sequence_length)
+        read_vectors = tf.TensorArray(tf.float32, self.sequence_length)
+        read_modes = tf.TensorArray(tf.float32, self.sequence_length)
 
         controller_state = self.controller.get_state() if self.controller.has_recurrent_nn else (tf.zeros(1), tf.zeros(1))
         memory_state = self.memory.init_memory()
@@ -212,7 +226,8 @@ class DNC:
                     free_gates, allocation_gates, write_gates,
                     read_weightings, write_weightings,
                     usage_vectors, erase_vectors, controller_state,
-                    memory_matrix, link_matrix
+                    memory_matrix, link_matrix, write_key, read_keys,
+                    write_vector, read_vectors, read_modes
                 ),
                 parallel_iterations=32,
                 swap_memory=True
@@ -233,7 +248,12 @@ class DNC:
                 'usage_vectors': utility.pack_into_tensor(final_results[8], axis=1),
                 'erase_vectors': utility.pack_into_tensor(final_results[9], axis=1),
                 'memory_matrix': utility.pack_into_tensor(final_results[11], axis=1),
-                'link_matrix': utility.pack_into_tensor(final_results[12], axis=1)
+                'link_matrix': utility.pack_into_tensor(final_results[12], axis=1),
+                'write_key': utility.pack_into_tensor(final_results[13], axis=1),
+                'read_keys': utility.pack_into_tensor(final_results[14], axis=1),
+                'write_vector': utility.pack_into_tensor(final_results[15], axis=1),
+                'read_vectors': utility.pack_into_tensor(final_results[16], axis=1),
+                'read_modes': utility.pack_into_tensor(final_results[17], axis=1)
             }
 
 

@@ -32,18 +32,18 @@ if __name__ == '__main__':
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
     batch_size = 1
-    input_size = 90
-    output_size = 90
-    sequence_max_length = 420
-    words_count = 500
-    word_size = 50
-    read_heads = 4
+    input_size = 72
+    output_size = 72
+    sequence_max_length = 425
+    words_count = 425
+    word_size = 72
+    read_heads = 2
 
     learning_rate = 1e-4
     momentum = 0.9
 
     from_checkpoint = None
-    iterations = 200000
+    iterations = 100000
 
     options,_ = getopt.getopt(sys.argv[1:], '', ['checkpoint=', 'iterations='])
 
@@ -79,20 +79,26 @@ if __name__ == '__main__':
             )
 
             output, memory_views = ncomputer.get_outputs()
-            loss = None
-            for _k in range(9):
-                tmp_loss = tf.reduce_mean(
-                    tf.nn.softmax_cross_entropy_with_logits_v2(
-                        logits=output[:,:,_k*10:(_k+1)*10],
-                        labels=ncomputer.target_output[:,:,_k*10:(_k+1)*10],
-                        name="categorical_loss_"+str(_k+1)
-                    )
+            loss = tf.reduce_mean(
+                tf.nn.softmax_cross_entropy_with_logits_v2(
+                    logits=output,
+                    labels=ncomputer.target_output,
+                    name="categorical_loss"
                 )
-                if loss is None:
-                    loss = tmp_loss
-                else:
-                    loss = loss + tmp_loss
-            loss = loss / 9.0
+            )
+            # for _k in range(9):
+            #     tmp_loss = tf.reduce_mean(
+            #         tf.nn.softmax_cross_entropy_with_logits_v2(
+            #             logits=output[:,:,_k*10:(_k+1)*10],
+            #             labels=ncomputer.target_output[:,:,_k*10:(_k+1)*10],
+            #             name="categorical_loss_"+str(_k+1)
+            #         )
+            #     )
+            #     if loss is None:
+            #         loss = tmp_loss
+            #     else:
+            #         loss = loss + tmp_loss
+            # loss = loss / 9.0
             # print(loss)
 
             summeries = []
@@ -141,7 +147,7 @@ if __name__ == '__main__':
                     summerize_op if summerize else no_summerize
                 ], feed_dict={
                     ncomputer.input_data: np.array(input_data),
-                    ncomputer.target_output: np.array(target_output),
+                    ncomputer.target_output: np.array(target_output)/7.0,
                     ncomputer.sequence_length: np.array(input_data).shape[1]
                 })
 
