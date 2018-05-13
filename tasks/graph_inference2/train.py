@@ -25,6 +25,10 @@ def binary_cross_entropy(predictions, targets):
     )
 
 
+def kl_divergence(p, q): 
+    return tf.reduce_sum(p * tf.log(p/q))
+
+
 if __name__ == '__main__':
     dirname = os.path.dirname(__file__)
     ckpts_dir = os.path.join(dirname , 'checkpoints')
@@ -34,12 +38,12 @@ if __name__ == '__main__':
     batch_size = 16
     input_size = 52
     output_size = 52
-    sequence_max_length = 140
-    words_count = 140
-    word_size = 52
-    read_heads = 2
+    sequence_max_length = 150
+    words_count = 108
+    word_size = 10
+    read_heads = 3
 
-    learning_rate = 1e-4
+    learning_rate = 1e-3
     momentum = 0.9
 
     from_checkpoint = None
@@ -92,8 +96,8 @@ if __name__ == '__main__':
                 _theta = _k//2
                 tmp_loss = tf.reduce_mean(
                     tf.nn.softmax_cross_entropy_with_logits_v2(
-                        logits=output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
-                        labels=ncomputer.target_output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
+                        logits=output[:,106:,(_k*10)+_theta:(_k+1)*10+_theta],
+                        labels=ncomputer.target_output[:,106:,(_k*10)+_theta:(_k+1)*10+_theta],
                         name="categorical_loss_"+str(_k+1)
                     )
                 )
@@ -101,7 +105,8 @@ if __name__ == '__main__':
                     loss = tmp_loss
                 else:
                     loss = loss + tmp_loss
-            loss = loss / 5.0
+            # kl_loss = kl_divergence()
+            # loss = loss / 5.0
             # print(loss)
 
             summeries = []
@@ -110,7 +115,7 @@ if __name__ == '__main__':
             for i, (grad, var) in enumerate(gradients):
                 if grad is not None:
                     summeries.append(tf.summary.histogram(var.name + '/grad', grad))
-                    gradients[i] = (tf.clip_by_value(grad, -10, 10), var)
+                    # gradients[i] = (tf.clip_by_value(grad, -10, 10), var)
 
             apply_gradients = optimizer.apply_gradients(gradients)
 
