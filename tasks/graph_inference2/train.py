@@ -93,7 +93,7 @@ if __name__ == '__main__':
                 tmp_loss = tf.reduce_mean(
                     tf.nn.softmax_cross_entropy_with_logits_v2(
                         logits=output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
-                        labels=ncomputer.target_output[:,:,(_k*10)+_theta:(_k+1)*10+_theta,
+                        labels=ncomputer.target_output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
                         name="categorical_loss_"+str(_k+1)
                     )
                 )
