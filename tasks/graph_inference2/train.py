@@ -32,11 +32,11 @@ if __name__ == '__main__':
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
     batch_size = 1
-    input_size = 72
-    output_size = 72
-    sequence_max_length = 425
-    words_count = 425
-    word_size = 72
+    input_size = 52
+    output_size = 52
+    sequence_max_length = 140
+    words_count = 140
+    word_size = 52
     read_heads = 2
 
     learning_rate = 1e-4
@@ -55,7 +55,7 @@ if __name__ == '__main__':
 
     graph = tf.Graph()
 
-    with open("./json/metro_training_data.json", "r") as f:
+    with open("./json/metro_training_data2.json", "r") as f:
         data_dict = json.load(f)
     edges = data_dict["edge"]
     metro_graph = data_dict["graph"]
@@ -79,26 +79,29 @@ if __name__ == '__main__':
             )
 
             output, memory_views = ncomputer.get_outputs()
-            loss = tf.reduce_mean(
-                tf.nn.softmax_cross_entropy_with_logits_v2(
-                    logits=output,
-                    labels=ncomputer.target_output,
-                    name="categorical_loss"
-                )
-            )
-            # for _k in range(9):
-            #     tmp_loss = tf.reduce_mean(
-            #         tf.nn.softmax_cross_entropy_with_logits_v2(
-            #             logits=output[:,:,_k*10:(_k+1)*10],
-            #             labels=ncomputer.target_output[:,:,_k*10:(_k+1)*10],
-            #             name="categorical_loss_"+str(_k+1)
-            #         )
+            # loss = tf.reduce_mean(
+            #     tf.nn.softmax_cross_entropy_with_logits_v2(
+            #         logits=output,
+            #         labels=ncomputer.target_output,
+            #         name="categorical_loss"
             #     )
-            #     if loss is None:
-            #         loss = tmp_loss
-            #     else:
-            #         loss = loss + tmp_loss
-            # loss = loss / 9.0
+            # )
+            loss = None
+            _theta = 0
+            for _k in range(5):
+                _theta = _k//2
+                tmp_loss = tf.reduce_mean(
+                    tf.nn.softmax_cross_entropy_with_logits_v2(
+                        logits=output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
+                        labels=ncomputer.target_output[:,:,(_k*10)+_theta:(_k+1)*10+_theta,
+                        name="categorical_loss_"+str(_k+1)
+                    )
+                )
+                if loss is None:
+                    loss = tmp_loss
+                else:
+                    loss = loss + tmp_loss
+            loss = loss / 5.0
             # print(loss)
 
             summeries = []
@@ -147,7 +150,7 @@ if __name__ == '__main__':
                     summerize_op if summerize else no_summerize
                 ], feed_dict={
                     ncomputer.input_data: np.array(input_data),
-                    ncomputer.target_output: np.array(target_output)/7.0,
+                    ncomputer.target_output: np.array(target_output),
                     ncomputer.sequence_length: np.array(input_data).shape[1]
                 })
 
@@ -162,11 +165,11 @@ if __name__ == '__main__':
                     last_100_losses = []
                 
 
-                if mem_summarize:
-                    with open(mem_logs_dir+"/"+str(i)+".json", "w") as f:
-                        json.dump(mem_views_values, f, ensure_ascii=False, separators=(',', ':'))
+                # if mem_summarize:
+                #     with open(mem_logs_dir+"/graph2-data2-step-"+str(i)+".json", "w") as f:
+                #         json.dump(mem_views_values, f, ensure_ascii=False, separators=(',', ':'))
 
                 if take_checkpoint:
                     llprint("\nSaving Checkpoint ... "),
-                    ncomputer.save(session, ckpts_dir, 'task1-3-step-%d' % (i))
+                    ncomputer.save(session, ckpts_dir, 'graph2-data2-step-%d' % (i))
                     llprint("Done!\n")

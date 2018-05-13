@@ -11,7 +11,7 @@ the state to reset to zero on every input sequnece
 class RecurrentController(BaseController):
 
     def network_vars(self):
-        self.lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(128)
+        self.lstm_cell = tf.nn.rnn_cell.BasicLSTMCell(106)
         self.state = self.lstm_cell.zero_state(self.batch_size, tf.float32)
 
     def network_op(self, X, state):

@@ -61,7 +61,7 @@ def generate_data(batch_size, edges, graph, max_length):
         out_list = []
         for idx, i in enumerate(_arr):
             if idx < 2:
-                str_i = "{0:03d}".format(i)
+                str_i = "{0:02d}".format(i)
                 for char_i in str_i:
                     one_hot_char_i = np.eye(10)[[int(char_i)]].tolist()[0]
                     out_list.extend(one_hot_char_i)
@@ -79,7 +79,7 @@ def generate_data(batch_size, edges, graph, max_length):
         for _edge in edges.tolist():
             input_vec.append(convert_one_hot(_edge))
             out_vec.append(convert_one_hot([0, 0, 0]))
-        start_id, goal_id = random.sample(range(1, 141), 2)
+        start_id, goal_id = random.sample(range(1, 40), 2)
         shortest_path = bfs_shortest_path(graph, start_id, goal_id)
         input_vec.append(convert_one_hot([start_id, goal_id, 0]))
         out_vec.append(convert_one_hot([0, 0, 0]))
