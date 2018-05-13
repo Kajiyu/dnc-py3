@@ -176,5 +176,5 @@ if __name__ == '__main__':
 
                 if take_checkpoint:
                     llprint("\nSaving Checkpoint ... "),
-                    ncomputer.save(session, ckpts_dir, 'graph2-data2-step-%d' % (i))
+                    ncomputer.save(session, ckpts_dir, 'graph2-data2-2-step-%d' % (i))
                     llprint("Done!\n")
