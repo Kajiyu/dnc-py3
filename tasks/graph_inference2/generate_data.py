@@ -86,9 +86,9 @@ def generate_data(batch_size, edges, graph, max_length):
         for j in range(len(shortest_path)-1):
             input_vec.append(convert_one_hot([0, 0, 0]))
             out_vec.append(convert_one_hot(search_edge(shortest_path[j], shortest_path[j+1], edges)))
-        # while len(input_vec) < max_length:
-        #    input_vec.append(convert_one_hot([0, 0, 0]))
-        #    out_vec.append(convert_one_hot([0, 0, 0]))
+        while len(input_vec) < max_length:
+           input_vec.append(convert_one_hot([0, 0, 0]))
+           out_vec.append(convert_one_hot([0, 0, 0]))
         input_vecs.append(input_vec)
         out_vecs.append(out_vec)
         

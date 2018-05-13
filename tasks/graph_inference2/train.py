@@ -31,7 +31,7 @@ if __name__ == '__main__':
     tb_logs_dir = os.path.join(dirname, 'logs')
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
-    batch_size = 1
+    batch_size = 16
     input_size = 52
     output_size = 52
     sequence_max_length = 140
