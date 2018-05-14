@@ -2,3 +2,4 @@
 *.mp4
 *checkpoints/
 *checkpoints2/
+*.local
