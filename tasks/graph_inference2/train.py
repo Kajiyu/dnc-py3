@@ -3,6 +3,7 @@ warnings.filterwarnings('ignore')
 
 import tensorflow as tf
 import numpy as np
+# np.set_printoptions(threshold='inf')
 import getopt
 import time
 import sys
@@ -29,25 +30,46 @@ def kl_divergence(p, q):
     return tf.reduce_sum(p * tf.log(p/q))
 
 
+def prev_output_func(prev_output, _batch_size, _output_size):
+    _output_tensor = prev_output
+    for _i in range(5):
+        flag_mat = np.zeros((_batch_size, _output_size))
+        _theta = _i//2
+        flag_mat[:,(_i*10)+_theta:(_i+1)*10+_theta] = np.ones((_batch_size, 10))
+        tmp_tensor = tf.nn.softmax(prev_output * flag_mat)
+        tmp_tensor = tf.where(
+            tf.equal(tf.reduce_max(tmp_tensor, axis=1, keepdims=True), tmp_tensor), 
+            tf.constant(1, shape=tmp_tensor.shape, dtype="float32"), 
+            tf.constant(0, shape=tmp_tensor.shape, dtype="float32")
+        )
+        if _i == 0:
+            _output_tensor = tmp_tensor
+        else:
+            _output_tensor = _output_tensor + tmp_tensor
+    return _output_tensor
+
+
 if __name__ == '__main__':
     dirname = os.path.dirname(__file__)
     ckpts_dir = os.path.join(dirname , 'checkpoints')
     tb_logs_dir = os.path.join(dirname, 'logs')
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
-    batch_size = 16
+    batch_size = 32
     input_size = 52
     output_size = 52
-    sequence_max_length = 150
+    sequence_max_length = 120
     words_count = 108
-    word_size = 10
+    word_size = 30
     read_heads = 3
 
-    learning_rate = 1e-3
+    learning_rate = 1e-4
     momentum = 0.9
 
     from_checkpoint = None
     iterations = 100000
+
+    task_name = "shortest_path"
 
     options,_ = getopt.getopt(sys.argv[1:], '', ['checkpoint=', 'iterations='])
 
@@ -79,7 +101,9 @@ if __name__ == '__main__':
                 words_count,
                 word_size,
                 read_heads,
-                batch_size
+                batch_size,
+                task_name,
+                prev_output_func
             )
 
             output, memory_views = ncomputer.get_outputs()
@@ -96,8 +120,8 @@ if __name__ == '__main__':
                 _theta = _k//2
                 tmp_loss = tf.reduce_mean(
                     tf.nn.softmax_cross_entropy_with_logits_v2(
-                        logits=output[:,106:,(_k*10)+_theta:(_k+1)*10+_theta],
-                        labels=ncomputer.target_output[:,106:,(_k*10)+_theta:(_k+1)*10+_theta],
+                        logits=output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
+                        labels=ncomputer.target_output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
                         name="categorical_loss_"+str(_k+1)
                     )
                 )
@@ -106,7 +130,7 @@ if __name__ == '__main__':
                 else:
                     loss = loss + tmp_loss
             # kl_loss = kl_divergence()
-            # loss = loss / 5.0
+            loss = loss / 5.0
             # print(loss)
 
             summeries = []
@@ -142,23 +166,25 @@ if __name__ == '__main__':
 
             for i in range(iterations + 1):
                 llprint("\rIteration %d/%d" % (i, iterations))
-                input_data, target_output = generate_data(batch_size, np.array(edges), metro_graph, sequence_max_length)
-
+                input_data, target_output, input_modes = generate_data(batch_size, np.array(edges), metro_graph, sequence_max_length)
                 summerize = (i % 5 == 0)
                 mem_summarize = (i % 1000 == 0)
                 take_checkpoint = (i != 0) and (i % 1000 == 0)
-
-                loss_value, _, mem_views_values, summary = session.run([
+                loss_value, _, mem_views_values, o, summary = session.run([
                     loss,
                     apply_gradients,
                     memory_views,
+                    output,
                     summerize_op if summerize else no_summerize
                 ], feed_dict={
                     ncomputer.input_data: np.array(input_data),
                     ncomputer.target_output: np.array(target_output),
-                    ncomputer.sequence_length: np.array(input_data).shape[1]
+                    ncomputer.sequence_length: np.array(input_data).shape[1],
+                    ncomputer.input_mode: np.array(input_modes)
                 })
-
+                # for kkk in range(len(mem_views_values["inputs"][0])):
+                #     print(kkk, mem_views_values["inputs"][0][kkk])
+                #     print(o[0][kkk])
                 last_100_losses.append(loss_value)
                 if summary:
                     summerizer.add_summary(summary, i)
@@ -176,5 +202,5 @@ if __name__ == '__main__':
 
                 if take_checkpoint:
                     llprint("\nSaving Checkpoint ... "),
-                    ncomputer.save(session, ckpts_dir, 'graph2-data2-2-step-%d' % (i))
+                    ncomputer.save(session, ckpts_dir, 'graph2-data2-3-step-%d' % (i))
                     llprint("Done!\n")

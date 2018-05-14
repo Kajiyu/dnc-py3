@@ -3,11 +3,13 @@ from tensorflow.python.ops.rnn_cell import LSTMStateTuple
 from . memory import Memory
 from . utility import utility
 import os
+import numpy as np
 
 class DNC:
 
     def __init__(self, controller_class, input_size, output_size, max_sequence_length,
-                 memory_words_num = 256, memory_word_size = 64, memory_read_heads = 4, batch_size = 1):
+                 memory_words_num = 256, memory_word_size = 64, memory_read_heads = 4, batch_size = 1,
+                 task_name=None, prev_output_func=None):
         """
         constructs a complete DNC architecture as described in the DNC paper
         http://www.nature.com/nature/journal/vaop/ncurrent/full/nature20101.html
@@ -44,10 +46,15 @@ class DNC:
         self.controller = controller_class(self.input_size, self.output_size, self.read_heads, self.word_size, self.batch_size)
 
         # input data placeholders
+        self.task_name = task_name
         self.input_data = tf.placeholder(tf.float32, [batch_size, None, input_size], name='input')
         self.target_output = tf.placeholder(tf.float32, [batch_size, None, output_size], name='targets')
         self.sequence_length = tf.placeholder(tf.int32, name='sequence_length')
-
+        self.input_mode = tf.placeholder(tf.float32, [batch_size, None, input_size], name='input_mode')
+        self.input_history = []
+        self.prev_time = 0
+        self.prev_output_func = prev_output_func
+        # self.prev_output = tf.zeros((self.batch_size, self.output_size))
         self.build_graph()
 
 
@@ -125,7 +132,8 @@ class DNC:
 
     def _loop_body(self, time, memory_state, outputs, free_gates, allocation_gates, write_gates,
                    read_weightings, write_weightings, usage_vectors, erase_vectors, controller_state,
-                   memory_matrix, link_matrix, write_key, read_keys, write_vector, read_vectors, read_modes):
+                   memory_matrix, link_matrix, write_key, read_keys, write_vector, read_vectors,
+                   read_modes, inputs, prev_output):
         """
         the body of the DNC sequence processing loop
 
@@ -134,6 +142,7 @@ class DNC:
         time: Tensor
         outputs: TensorArray
         memory_state: Tuple
+        prev_output: tf.Tensor (Not TensorArray.)
         free_gates: TensorArray
         allocation_gates: TensorArray
         write_gates: TensorArray
@@ -144,20 +153,24 @@ class DNC:
 
         Returns: Tuple containing all updated arguments
         """
-
         step_input = self.unpacked_input_data.read(time)
-
+        step_input_mode = self.unpacked_input_mode.read(time)
+        prev_output = self.prev_output_func(prev_output, self.batch_size, self.output_size)
+        step_input = tf.multiply(step_input, step_input_mode) + tf.multiply(prev_output, tf.ones((self.batch_size, self.output_size))-step_input_mode)
+        # print(step_input)
+        # step_input = prev_output
         output_list = self._step_op(step_input, memory_state, controller_state)
+        inputs = inputs.write(time, step_input)
+        self.tf_prev_time = time
 
         # update memory parameters
-
         new_controller_state = tf.zeros(1)
         new_memory_state = tuple(output_list[0:7])
 
         new_controller_state = LSTMStateTuple(output_list[12], output_list[13])
 
         outputs = outputs.write(time, output_list[7])
-
+        prev_output = output_list[7]
         # collecting memory view for the current step
         free_gates = free_gates.write(time, output_list[8])
         allocation_gates = allocation_gates.write(time, output_list[9])
@@ -181,7 +194,7 @@ class DNC:
             read_weightings, write_weightings,
             usage_vectors, erase_vectors, new_controller_state,
             memory_matrix, link_matrix, write_key, read_keys,
-            write_vector, read_vectors, read_modes
+            write_vector, read_vectors, read_modes, inputs, prev_output
         )
 
 
@@ -192,7 +205,9 @@ class DNC:
         """
 
         self.unpacked_input_data = utility.unpack_into_tensorarray(self.input_data, 1, size=self.sequence_length)
-
+        self.unpacked_input_mode = utility.unpack_into_tensorarray(self.input_mode, 1, size=self.sequence_length)
+        self.input_history = []
+        inputs = tf.TensorArray(tf.float32, self.sequence_length)
         outputs = tf.TensorArray(tf.float32, self.sequence_length)
         free_gates = tf.TensorArray(tf.float32, self.sequence_length)
         allocation_gates = tf.TensorArray(tf.float32, self.sequence_length)
@@ -211,13 +226,14 @@ class DNC:
 
         controller_state = self.controller.get_state() if self.controller.has_recurrent_nn else (tf.zeros(1), tf.zeros(1))
         memory_state = self.memory.init_memory()
+        prev_output = tf.zeros((self.batch_size, self.output_size))
         if not isinstance(controller_state, LSTMStateTuple):
             controller_state = LSTMStateTuple(controller_state[0], controller_state[1])
         final_results = None
 
         with tf.variable_scope("sequence_loop") as scope:
-            time = tf.constant(0, dtype=tf.int32)
-
+            # time = tf.constant(0, dtype=tf.int32)
+            time = 0
             final_results = tf.while_loop(
                 cond=lambda time, *_: time < self.sequence_length,
                 body=self._loop_body,
@@ -227,9 +243,9 @@ class DNC:
                     read_weightings, write_weightings,
                     usage_vectors, erase_vectors, controller_state,
                     memory_matrix, link_matrix, write_key, read_keys,
-                    write_vector, read_vectors, read_modes
+                    write_vector, read_vectors, read_modes, inputs, prev_output
                 ),
-                parallel_iterations=32,
+                parallel_iterations=1,
                 swap_memory=True
             )
 
@@ -253,7 +269,8 @@ class DNC:
                 'read_keys': utility.pack_into_tensor(final_results[14], axis=1),
                 'write_vector': utility.pack_into_tensor(final_results[15], axis=1),
                 'read_vectors': utility.pack_into_tensor(final_results[16], axis=1),
-                'read_modes': utility.pack_into_tensor(final_results[17], axis=1)
+                'read_modes': utility.pack_into_tensor(final_results[17], axis=1),
+                'inputs': utility.pack_into_tensor(final_results[18], axis=1)
             }
 
 
