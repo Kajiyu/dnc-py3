@@ -155,8 +155,9 @@ class DNC:
         """
         step_input = self.unpacked_input_data.read(time)
         step_input_mode = self.unpacked_input_mode.read(time)
-        prev_output = self.prev_output_func(prev_output, self.batch_size, self.output_size)
-        step_input = tf.multiply(step_input, step_input_mode) + tf.multiply(prev_output, tf.ones((self.batch_size, self.output_size))-step_input_mode)
+        if self.task_name == "shortest_path":
+            prev_output = self.prev_output_func(prev_output, self.batch_size, self.output_size)
+            step_input = tf.multiply(step_input, step_input_mode) + tf.multiply(prev_output, tf.ones((self.batch_size, self.output_size))-step_input_mode)
         # print(step_input)
         # step_input = prev_output
         output_list = self._step_op(step_input, memory_state, controller_state)

@@ -186,9 +186,9 @@ if __name__ == '__main__':
                     ncomputer.sequence_length: np.array(input_data).shape[1],
                     ncomputer.input_mode: np.array(input_modes)
                 })
-                # for kkk in range(len(mem_views_values["inputs"][0])):
-                #     print(kkk, mem_views_values["inputs"][0][kkk])
-                #     print(o[0][kkk])
+                for kkk in range(len(mem_views_values["inputs"][0])):
+                    print(kkk, mem_views_values["inputs"][0][kkk])
+                    print(o[0][kkk])
                 last_100_losses.append(loss_value)
                 if summary:
                     summerizer.add_summary(summary, i)
