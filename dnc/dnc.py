@@ -168,8 +168,8 @@ class DNC:
         new_memory_state = tuple(output_list[0:7])
 
         new_controller_state = LSTMStateTuple(output_list[12], output_list[13])
-
-        outputs = outputs.write(time, output_list[7])
+        tf.multiply(output_list[7], tf.ones((self.batch_size, self.output_size))-step_input_mode)
+        outputs = outputs.write(time, tf.multiply(output_list[7], tf.ones((self.batch_size, self.output_size))-step_input_mode))
         prev_output = output_list[7]
         # collecting memory view for the current step
         free_gates = free_gates.write(time, output_list[8])
@@ -245,7 +245,7 @@ class DNC:
                     memory_matrix, link_matrix, write_key, read_keys,
                     write_vector, read_vectors, read_modes, inputs, prev_output
                 ),
-                parallel_iterations=1,
+                parallel_iterations=10,
                 swap_memory=True
             )
 

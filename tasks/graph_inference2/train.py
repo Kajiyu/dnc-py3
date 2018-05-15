@@ -9,10 +9,11 @@ import time
 import sys
 import os
 import json
+import random
 
 from dnc.dnc import DNC
 from recurrent_controller import RecurrentController
-from generate_data import generate_data
+from generate_data import generate_data, generate_patial_graph
 
 
 def llprint(message):
@@ -32,9 +33,9 @@ def kl_divergence(p, q):
 
 def prev_output_func(prev_output, _batch_size, _output_size):
     _output_tensor = prev_output
-    for _i in range(5):
+    for _i in range(7):
         flag_mat = np.zeros((_batch_size, _output_size))
-        _theta = _i//2
+        _theta = _i//3
         flag_mat[:,(_i*10)+_theta:(_i+1)*10+_theta] = np.ones((_batch_size, 10))
         tmp_tensor = tf.nn.softmax(prev_output * flag_mat)
         tmp_tensor = tf.where(
@@ -55,15 +56,15 @@ if __name__ == '__main__':
     tb_logs_dir = os.path.join(dirname, 'logs')
     mem_logs_dir = os.path.join(dirname, 'mem_logs/')
     
-    batch_size = 32
-    input_size = 52
-    output_size = 52
+    batch_size = 1
+    input_size = 72
+    output_size = 72
     sequence_max_length = 120
-    words_count = 108
-    word_size = 30
-    read_heads = 3
+    words_count = 256
+    word_size = 50
+    read_heads = 5
 
-    learning_rate = 1e-4
+    learning_rate = 3e-6
     momentum = 0.9
 
     from_checkpoint = None
@@ -81,7 +82,7 @@ if __name__ == '__main__':
 
     graph = tf.Graph()
 
-    with open("./json/metro_training_data2.json", "r") as f:
+    with open("./json/metro_training_data.json", "r") as f:
         data_dict = json.load(f)
     edges = data_dict["edge"]
     metro_graph = data_dict["graph"]
@@ -116,8 +117,8 @@ if __name__ == '__main__':
             # )
             loss = None
             _theta = 0
-            for _k in range(5):
-                _theta = _k//2
+            for _k in range(7):
+                _theta = _k//3
                 tmp_loss = tf.reduce_mean(
                     tf.nn.softmax_cross_entropy_with_logits_v2(
                         logits=output[:,:,(_k*10)+_theta:(_k+1)*10+_theta],
@@ -130,7 +131,7 @@ if __name__ == '__main__':
                 else:
                     loss = loss + tmp_loss
             # kl_loss = kl_divergence()
-            loss = loss / 5.0
+            # loss = loss / 5.0
             # print(loss)
 
             summeries = []
@@ -139,7 +140,7 @@ if __name__ == '__main__':
             for i, (grad, var) in enumerate(gradients):
                 if grad is not None:
                     summeries.append(tf.summary.histogram(var.name + '/grad', grad))
-                    # gradients[i] = (tf.clip_by_value(grad, -10, 10), var)
+                    gradients[i] = (tf.clip_by_value(grad, -10, 10), var)
 
             apply_gradients = optimizer.apply_gradients(gradients)
 
@@ -166,7 +167,10 @@ if __name__ == '__main__':
 
             for i in range(iterations + 1):
                 llprint("\rIteration %d/%d" % (i, iterations))
-                input_data, target_output, input_modes = generate_data(batch_size, np.array(edges), metro_graph, sequence_max_length)
+                start_idx = random.randint(1, 140)
+                node_size = random.randint(5, 10)
+                p_graph, p_edges = generate_patial_graph(edges, metro_graph, start_idx, node_size)
+                input_data, target_output, input_modes = generate_data(batch_size, np.array(p_edges), p_graph, sequence_max_length, 2, 2)
                 summerize = (i % 5 == 0)
                 mem_summarize = (i % 1000 == 0)
                 take_checkpoint = (i != 0) and (i % 1000 == 0)
